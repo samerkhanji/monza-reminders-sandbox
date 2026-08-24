@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Monza Installment Reminders — Sandbox</title>
+<style>
+  :root {
+    --bg: #f7f7f5;
+    --panel: #ffffff;
+    --border: #e4e2dd;
+    --text: #1f1d1a;
+    --muted: #6b6862;
+    --amber: #b45309;
+    --amber-bg: #fef3c7;
+    --green: #15803d;
+    --green-bg: #dcfce7;
+    --red: #b91c1c;
+    --red-bg: #fee2e2;
+    --blue: #1d4ed8;
+    --blue-bg: #dbeafe;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    padding: 24px;
+  }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  h2 { font-size: 15px; margin: 0 0 10px; }
+  .sub { color: var(--muted); font-size: 13px; margin: 0 0 20px; }
+  .grid {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    gap: 20px;
+    align-items: start;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+  }
+  .panel + .panel { margin-top: 16px; }
+  label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin: 12px 0 4px; }
+  label:first-child { margin-top: 0; }
+  input[type="text"], input[type="date"], textarea {
+    width: 100%;
+    padding: 7px 9px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font: 13px var(--mono);
+    background: #fff;
+    color: var(--text);
+  }
+  textarea { resize: vertical; min-height: 44px; }
+  .row { display: flex; gap: 8px; align-items: center; }
+  .row input[type="text"] { flex: 1; }
+  button {
+    appearance: none;
+    border: 1px solid var(--border);
+    background: #fff;
+    color: var(--text);
+    padding: 7px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button:hover { background: #f0efec; }
+  button.primary { background: var(--text); color: #fff; border-color: var(--text); }
+  button.primary:hover { opacity: 0.85; }
+  button:disabled { opacity: 0.5; cursor: default; }
+  .checkbox-row { display: flex; align-items: center; gap: 8px; margin: 12px 0 4px; }
+  .checkbox-row input { width: auto; }
+  .checkbox-row label { margin: 0; font-weight: 600; color: var(--text); }
+  .hint { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .hint a { color: var(--blue); }
+  #fileFallback { margin-top: 6px; font-size: 12px; }
+  .status { font-size: 12px; padding: 8px 10px; border-radius: 6px; margin-top: 10px; display: none; }
+  .status.show { display: block; }
+  .status.err { background: var(--red-bg); color: var(--red); }
+  .status.ok { background: var(--green-bg); color: var(--green); }
+  .summary { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+  .chip { background: var(--panel); border: 1px solid var(--border); border-radius: 999px; padding: 5px 12px; font-size: 12px; font-weight: 600; }
+  .chip b { font-weight: 800; }
+  .card {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+    background: #fff;
+  }
+  .card .top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .card .name { font-weight: 700; }
+  .card .rule { font-size: 12px; color: var(--muted); }
+  .card .meta { font-size: 12px; color: var(--muted); margin: 4px 0 8px; }
+  .card .msg {
+    font: 13px var(--mono);
+    background: #faf9f7;
+    border: 1px dashed var(--border);
+    border-radius: 6px;
+    padding: 8px 10px;
+    white-space: pre-wrap;
+  }
+  .badge { display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; margin-left: 6px; }
+  .badge.send { background: var(--green-bg); color: var(--green); }
+  .badge.queue { background: var(--amber-bg); color: var(--amber); }
+  .badge.call { background: var(--blue-bg); color: var(--blue); }
+  .empty { color: var(--muted); font-size: 13px; padding: 16px; text-align: center; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted); font-weight: 600; font-size: 12px; }
+  .pass { color: var(--green); font-weight: 700; }
+  .fail { color: var(--red); font-weight: 700; }
+  .excl-row { font-size: 13px; padding: 6px 0; border-bottom: 1px solid var(--border); color: var(--muted); }
+  .excl-row b { color: var(--text); }
+  details summary { cursor: pointer; font-weight: 600; font-size: 13px; margin-bottom: 8px; }
+  code { background: #eee7; padding: 1px 4px; border-radius: 4px; font-size: 12px; }
+</style>
+</head>
+<body>
+
+<h1>Monza Installment Reminders — Sandbox</h1>
+<p class="sub">
+  Reads live from a Google Sheet (or a pasted/uploaded CSV) and runs the exact
+  rule-matching, phone normalization, pilot-mode gating, and monthly-checklist
+  logic from <code>200_installment_reminders.sql</code> — no Supabase, no
+  login, nothing touches the real Monza SAL APP.
+</p>
+
+<div class="grid">
+  <!-- ---------------------------------------------------------- CONTROLS -->
+  <div>
+    <div class="panel">
+      <h2>Data source</h2>
+      <label for="sheetId">Google Sheet ID</label>
+      <div class="row">
+        <input type="text" id="sheetId" value="10pFPGfG80pG6RkfBWOZftRjb_LeNKz1FrRjjoF4iDYI" />
+      </div>
+      <label for="sheetGid">Tab (gid)</label>
+      <input type="text" id="sheetGid" value="1012851068" />
+      <div class="row" style="margin-top:10px">
+        <button class="primary" id="loadBtn">Load from Sheet</button>
+        <button id="openSheetBtn" type="button">Open Sheet ↗</button>
+      </div>
+      <div id="loadStatus" class="status"></div>
+      <div id="fileFallback">
+        <label for="csvFile">…or load a CSV file instead</label>
+        <input type="file" id="csvFile" accept=".csv,text/csv" />
+      </div>
+      <p class="hint">
+        The Sheet must be shared as <b>Anyone with the link → Viewer</b>
+        (Share → General access) for the fetch to work. If it's still
+        Restricted, use the CSV file picker above instead — download the
+        Sheet via <em>File → Download → CSV</em> first.
+      </p>
+    </div>
+
+    <div class="panel">
+      <h2>Simulation settings</h2>
+      <label for="todayInput">"Today" for this run</label>
+      <input type="date" id="todayInput" />
+
+      <div class="checkbox-row">
+        <input type="checkbox" id="pilotMode" checked />
+        <label for="pilotMode">Pilot mode on</label>
+      </div>
+      <label for="pilotPhones">Approved auto-send numbers (comma-separated)</label>
+      <textarea id="pilotPhones" rows="2">+9613195955</textarea>
+      <p class="hint">Mirrors <code>installment_reminders.pilot_mode</code> / <code>.pilot_phones</code>.</p>
+
+      <div class="row" style="margin-top:14px">
+        <button class="primary" id="runBtn">Run simulation</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ------------------------------------------------------------ RESULTS -->
+  <div>
+    <div id="summary" class="summary"></div>
+
+    <div class="panel">
+      <h2>Reminders that would fire today</h2>
+      <div id="fired"><p class="empty">Load data and press "Run simulation".</p></div>
+    </div>
+
+    <div class="panel">
+      <h2>Monthly checklist</h2>
+      <div id="checklist"><p class="empty">—</p></div>
+    </div>
+
+    <div class="panel">
+      <h2>Excluded rows</h2>
+      <div id="excluded"><p class="empty">—</p></div>
+    </div>
+
+    <div class="panel">
+      <details>
+        <summary>Unit tests — phone normalization (<span id="unitSummary">not run</span>)</summary>
+        <table id="unitTable"></table>
+      </details>
+    </div>
+  </div>
+</div>
+
+<script>
+// =============================================================================
+// Ported from supabase/tests/installment-reminders-harness.mjs, which in turn
+// ports supabase/migrations/200_installment_reminders.sql. Keep these three
+// in sync if the SQL's rules, templates, or generator logic change.
+// =============================================================================
+
+const RULES = [
+  { rule_key: "before_5d", label: "5 days before due", offset_days: -5, channel_mode: "auto", auto_generate: true, active: true },
+  { rule_key: "before_1d", label: "1 day before due", offset_days: -1, channel_mode: "auto", auto_generate: true, active: true },
+  { rule_key: "due_today", label: "Due today", offset_days: 0, channel_mode: "auto", auto_generate: true, active: true },
+  { rule_key: "late_3d", label: "3 days late — friendly reminder", offset_days: 3, channel_mode: "auto", auto_generate: true, active: true },
+  { rule_key: "late_8d", label: "8 days late — formal call", offset_days: 8, channel_mode: "call", auto_generate: true, active: true },
+  { rule_key: "late_16d", label: "16 days late — manager call", offset_days: 16, channel_mode: "call", auto_generate: true, active: true },
+];
+
+const TEMPLATES = {
+  before_5d: { en: "Dear {name}, a friendly reminder from {company}: installment {installment_no} of {total_installments} for your {car} — {amount} — is due on {due_date}. Thank you for choosing Monza.",
+               ar: "عزيزي/عزيزتي {name}، تذكير ودّي من {company}: القسط {installment_no} من {total_installments} لسيارتك {car} بقيمة {amount} يستحق بتاريخ {due_date}. شكراً لاختياركم مونزا.",
+               fr: "Cher/Chère {name}, petit rappel de {company} : l’échéance {installment_no} sur {total_installments} de votre {car} — {amount} — arrive à terme le {due_date}. Merci de votre confiance." },
+  before_1d: { en: "Dear {name}, installment {installment_no} of {total_installments} for your {car} — {amount} — is due tomorrow, {due_date}. Thank you, {company}",
+               ar: "عزيزي/عزيزتي {name}، القسط {installment_no} من {total_installments} لسيارتك {car} بقيمة {amount} يستحق غداً، {due_date}. شكراً لكم، {company}",
+               fr: "Cher/Chère {name}, l’échéance {installment_no} sur {total_installments} de votre {car} — {amount} — est due demain, le {due_date}. Merci, {company}" },
+  due_today: { en: "Dear {name}, installment {installment_no} of {total_installments} for your {car} — {amount} — is due today ({due_date}). If you have already paid, please ignore this message. {company}",
+               ar: "عزيزي/عزيزتي {name}، القسط {installment_no} من {total_installments} لسيارتك {car} بقيمة {amount} يستحق اليوم ({due_date}). إذا كنتم قد سدّدتم، يرجى تجاهل هذه الرسالة. {company}",
+               fr: "Cher/Chère {name}, l’échéance {installment_no} sur {total_installments} de votre {car} — {amount} — est due aujourd’hui ({due_date}). Si vous avez déjà réglé, merci d’ignorer ce message. {company}" },
+  late_3d:   { en: "Dear {name}, we have not yet received installment {installment_no} of {total_installments} for your {car} ({amount}, due {due_date}). Kindly arrange payment at your earliest convenience or contact us at {company_phone}. {company}",
+               ar: "عزيزي/عزيزتي {name}، لم نستلم بعد القسط {installment_no} من {total_installments} لسيارتك {car} ({amount}، استحقاق {due_date}). يرجى تسديد المبلغ في أقرب وقت أو التواصل معنا على {company_phone}. {company}",
+               fr: "Cher/Chère {name}, nous n’avons pas encore reçu l’échéance {installment_no} sur {total_installments} de votre {car} ({amount}, due le {due_date}). Merci de régulariser dès que possible ou de nous contacter au {company_phone}. {company}" },
+  late_8d:   { en: "Call {name}: installment {installment_no} of {total_installments} ({amount}, due {due_date}) is {days_late} days late. Ask for a firm payment date and log the outcome." },
+  late_16d:  { en: "Manager call — {name}: installment {installment_no} of {total_installments} ({amount}) is {days_late} days late. Understand the situation, consider restructuring, log the outcome." },
+  monthly_unchecked: { en: "Dear {name}, our monthly review shows installment {installment_no} of {total_installments} for your {car} — {amount} — is still outstanding (originally due {due_date}). Please arrange payment or contact us at {company_phone}. {company}" },
+};
+
+const COMPANY = "Monza S.A.L.";
+const COMPANY_PHONE = "our office";
+
+function normalizePhoneE164(raw, defaultCc = "961") {
+  if (!raw) return null;
+  let d = String(raw).replace(/[^0-9]/g, "");
+  if (!d) return null;
+  if (d.startsWith("00")) d = d.slice(2);
+  if (d.startsWith(defaultCc)) {
+    let rest = d.slice(defaultCc.length);
+    if (rest.startsWith("0")) rest = rest.slice(1);
+    if (rest.length >= 7 && rest.length <= 8) return "+" + defaultCc + rest;
+    if (d.length >= 10 && d.length <= 15) return "+" + d;
+  }
+  if (d.startsWith("0")) d = d.slice(1);
+  if (d.length >= 7 && d.length <= 8) return "+" + defaultCc + d;
+  if (d.length >= 10 && d.length <= 15) return "+" + d;
+  return null;
+}
+
+function render(ruleKey, lang, vars) {
+  const body = TEMPLATES[ruleKey]?.[lang] ?? TEMPLATES[ruleKey]?.en
+    ?? "Reminder: installment {installment_no} of {total_installments} — {amount} — due {due_date}.";
+  return Object.entries(vars).reduce((acc, [k, v]) => acc.split(`{${k}}`).join(v ?? ""), body);
+}
+
+function fmtAmount(n) {
+  return "USD " + n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function fmtDate(d, lang) {
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const yyyy = d.getFullYear();
+  if (lang === "en") {
+    const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    return `${dd} ${MONTHS[d.getMonth()]} ${yyyy}`;
+  }
+  return `${dd}/${mm}/${yyyy}`;
+}
+
+function daysBetween(a, b) {
+  return Math.round((a.getTime() - b.getTime()) / 86400000);
+}
+
+function inChecklistPopulation(dueDate, status, today) {
+  const periodStart = new Date(today.getFullYear(), today.getMonth(), 1);
+  const periodNext = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+  if (dueDate >= periodStart && dueDate < periodNext) return true;
+  return dueDate < periodStart && status === "overdue";
+}
+
+function parseCsv(text) {
+  const rows = [];
+  let row = [], field = "", inQuotes = false;
+  const pushField = () => { row.push(field); field = ""; };
+  const pushRow = () => { pushField(); rows.push(row); row = []; };
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQuotes) {
+      if (c === '"' && text[i + 1] === '"') { field += '"'; i++; }
+      else if (c === '"') inQuotes = false;
+      else field += c;
+    } else if (c === '"') inQuotes = true;
+    else if (c === ",") pushField();
+    else if (c === "\r") { /* skip */ }
+    else if (c === "\n") pushRow();
+    else field += c;
+  }
+  if (field.length || row.length) pushRow();
+  const header = rows.shift().map((h) => h.trim());
+  return rows.filter((r) => r.length > 1 || r[0]).map((r) => Object.fromEntries(header.map((h, i) => [h, (r[i] ?? "").trim()])));
+}
+
+function parseFlexibleDate(s) {
+  if (!s) return null;
+  const iso = /^(\d{4})-(\d{2})-(\d{2})/.exec(s);
+  if (iso) return new Date(`${s.slice(0, 10)}T12:00:00`);
+  const slash = /^(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(s);
+  if (slash) return new Date(+slash[3], +slash[1] - 1, +slash[2], 12);
+  const d = new Date(s);
+  return isNaN(d) ? null : d;
+}
+
+function runUnitTests() {
+  const T = [
+    { in: "70123456", exp: "+96170123456" },
+    { in: "03 123 456", exp: "+9613123456" },
+    { in: "+961 3 123 456", exp: "+9613123456" },
+    { in: "00 961 3 123456", exp: "+9613123456" },
+    { in: "009613123456", exp: "+9613123456" },
+    { in: "ask reception", exp: null },
+    { in: "", exp: null },
+    { in: "71234567", exp: "+96171234567" },
+    { in: "+96103195955", exp: "+9613195955" },
+  ];
+  const rowsHtml = [];
+  let pass = 0;
+  for (const t of T) {
+    const got = normalizePhoneE164(t.in);
+    const ok = got === t.exp;
+    if (ok) pass++;
+    rowsHtml.push(`<tr><td>${ok ? '<span class="pass">PASS</span>' : '<span class="fail">FAIL</span>'}</td><td><code>${escapeHtml(t.in) || "(empty)"}</code></td><td>→</td><td><code>${got ?? "null"}</code></td>${ok ? "" : `<td class="fail">expected ${t.exp ?? "null"}</td>`}</tr>`);
+  }
+  document.getElementById("unitTable").innerHTML = rowsHtml.join("");
+  document.getElementById("unitSummary").textContent = `${pass}/${T.length} pass`;
+  return pass === T.length;
+}
+
+function escapeHtml(s) {
+  return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+// -----------------------------------------------------------------------------
+// Data loading
+// -----------------------------------------------------------------------------
+let ROWS = null;
+
+function gvizUrl(sheetId, gid) {
+  return `https://docs.google.com/spreadsheets/d/${encodeURIComponent(sheetId)}/gviz/tq?tqx=out:csv&gid=${encodeURIComponent(gid)}`;
+}
+
+function setStatus(msg, kind) {
+  const el = document.getElementById("loadStatus");
+  el.textContent = msg;
+  el.className = "status show" + (kind ? " " + kind : "");
+}
+
+async function loadFromSheet() {
+  const id = document.getElementById("sheetId").value.trim();
+  const gid = document.getElementById("sheetGid").value.trim() || "0";
+  if (!id) { setStatus("Enter a Sheet ID first.", "err"); return; }
+  setStatus("Fetching…", "");
+  try {
+    const res = await fetch(gvizUrl(id, gid), { credentials: "omit" });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const text = await res.text();
+    if (/^\s*<(!doctype|html)/i.test(text)) {
+      throw new Error("Got an HTML page back instead of CSV — the Sheet is probably still Restricted (see hint below).");
+    }
+    ROWS = parseCsv(text);
+    setStatus(`Loaded ${ROWS.length} row(s) from the Sheet.`, "ok");
+  } catch (err) {
+    ROWS = null;
+    setStatus(
+      "Couldn't fetch the Sheet (" + err.message + "). Share it as “Anyone with the link”, or use the CSV file picker below instead.",
+      "err"
+    );
+  }
+}
+
+document.getElementById("csvFile").addEventListener("change", (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    ROWS = parseCsv(String(reader.result));
+    setStatus(`Loaded ${ROWS.length} row(s) from ${file.name}.`, "ok");
+  };
+  reader.readAsText(file);
+});
+
+document.getElementById("loadBtn").addEventListener("click", loadFromSheet);
+document.getElementById("openSheetBtn").addEventListener("click", () => {
+  const id = document.getElementById("sheetId").value.trim();
+  if (id) window.open(`https://docs.google.com/spreadsheets/d/${id}/edit`, "_blank", "noopener");
+});
+
+// -----------------------------------------------------------------------------
+// Simulation
+// -----------------------------------------------------------------------------
+function runSimulation() {
+  const unitOk = runUnitTests();
+
+  if (!ROWS) {
+    document.getElementById("summary").innerHTML = `<div class="chip">Load data first</div>`;
+    document.getElementById("fired").innerHTML = `<p class="empty">No data loaded yet.</p>`;
+    document.getElementById("checklist").innerHTML = "";
+    document.getElementById("excluded").innerHTML = "";
+    return;
+  }
+
+  const todayStr = document.getElementById("todayInput").value;
+  const TODAY = todayStr ? new Date(`${todayStr}T12:00:00`) : new Date();
+  const pilotMode = document.getElementById("pilotMode").checked;
+  const pilotPhones = document.getElementById("pilotPhones").value
+    .split(",").map((s) => s.trim()).filter(Boolean);
+  const pilotAllowed = (phone) => !pilotMode || pilotPhones.includes(phone);
+
+  const fired = [];
+  const excluded = [];
+  const checklist = [];
+
+  for (const row of ROWS) {
+    const status = row.installment_status;
+    const planStatus = row.plan_status;
+    const dueDate = parseFlexibleDate(row.due_date);
+    const eligible = ["upcoming", "due", "overdue", "partial"].includes(status) && planStatus === "active";
+    const checklistChecked = String(row.checklist_checked || "").toLowerCase() === "true";
+
+    if (!dueDate || !eligible) {
+      excluded.push({ row, reason: !dueDate ? "unparseable due_date" : (planStatus !== "active" ? `plan_status=${planStatus}` : `installment_status=${status}`) });
+      continue;
+    }
+
+    if (inChecklistPopulation(dueDate, status, TODAY)) {
+      checklist.push({ row, dueDate, checked: checklistChecked });
+    }
+    if (checklistChecked) continue;
+
+    let bestRule = null;
+    for (const rule of RULES) {
+      if (!rule.active || !rule.auto_generate) continue;
+      const scheduledFor = new Date(dueDate);
+      scheduledFor.setDate(scheduledFor.getDate() + rule.offset_days);
+      const diff = daysBetween(TODAY, scheduledFor);
+      if (diff < 0 || diff > 2) continue;
+      if (!bestRule || rule.offset_days > bestRule.offset_days) bestRule = rule;
+    }
+
+    if (bestRule) {
+      const rule = bestRule;
+      const amount = Math.max(parseFloat(row.amount_due || "0") - parseFloat(row.paid_amount || "0"), 0);
+      const daysLate = Math.max(daysBetween(TODAY, dueDate), 0);
+      const phone = normalizePhoneE164(row.phone);
+      let channel = rule.channel_mode === "call" ? "call" : "whatsapp_api";
+      let lastError = null;
+      if (channel === "whatsapp_api" && !phone) { channel = "manual"; lastError = "invalid_phone"; }
+      const willAutoSend = channel === "whatsapp_api" && pilotAllowed(phone);
+      if (channel === "whatsapp_api" && !willAutoSend) lastError = "pilot_mode_restricted";
+
+      const vars = {
+        name: row.customer_name, amount: fmtAmount(amount), due_date: fmtDate(dueDate, row.lang),
+        installment_no: row.installment_no, total_installments: row.total_installments, car: row.car,
+        days_late: String(daysLate), company: COMPANY, company_phone: COMPANY_PHONE,
+      };
+
+      fired.push({
+        customer: row.customer_name, scenario: row.scenario, rule: rule.label,
+        channel, lastError, willAutoSend, phone: phone ?? row.phone, lang: row.lang,
+        message: render(rule.rule_key, row.lang, vars),
+      });
+    }
+  }
+
+  renderSummary(unitOk, ROWS.length, fired, excluded, checklist);
+  renderFired(fired);
+  renderChecklist(checklist, TODAY);
+  renderExcluded(excluded);
+}
+
+function renderSummary(unitOk, total, fired, excluded, checklist) {
+  const unchecked = checklist.filter((c) => !c.checked).length;
+  document.getElementById("summary").innerHTML = `
+    <div class="chip">Rows <b>${total}</b></div>
+    <div class="chip">Fired <b>${fired.length}</b></div>
+    <div class="chip">Excluded <b>${excluded.length}</b></div>
+    <div class="chip">Checklist <b>${checklist.length}</b> (${unchecked} unchecked)</div>
+    <div class="chip">Unit tests <b style="color:${unitOk ? "var(--green)" : "var(--red)"}">${unitOk ? "PASS" : "FAIL"}</b></div>
+  `;
+}
+
+function renderFired(fired) {
+  const el = document.getElementById("fired");
+  if (!fired.length) { el.innerHTML = `<p class="empty">Nothing would fire today.</p>`; return; }
+  el.innerHTML = fired.map((f) => {
+    let badge = "";
+    if (f.channel === "whatsapp_api") badge = f.willAutoSend ? `<span class="badge send">auto-send</span>` : `<span class="badge queue">staff queue</span>`;
+    else if (f.channel === "call") badge = `<span class="badge call">staff call</span>`;
+    else badge = `<span class="badge queue">staff queue</span>`;
+    return `
+      <div class="card">
+        <div class="top"><span class="name">${escapeHtml(f.customer)}</span>${badge}</div>
+        <div class="rule">${escapeHtml(f.rule)} — ${escapeHtml(f.scenario)}</div>
+        <div class="meta">channel=${f.channel}${f.lastError ? ` · last_error=${f.lastError}` : ""} · phone=${escapeHtml(f.phone)} · lang=${f.lang}</div>
+        <div class="msg">${escapeHtml(f.message)}</div>
+      </div>`;
+  }).join("");
+}
+
+function renderChecklist(checklist, TODAY) {
+  const el = document.getElementById("checklist");
+  if (!checklist.length) { el.innerHTML = `<p class="empty">Nothing due this month or carried over as overdue.</p>`; return; }
+  const period = TODAY.toLocaleString("en-US", { month: "long", year: "numeric" });
+  const rows = checklist.map((c) => `<tr><td>${c.checked ? "☑" : "☐"}</td><td>${escapeHtml(c.row.customer_name)}</td><td>#${escapeHtml(c.row.installment_no)}</td><td>${escapeHtml(c.row.due_date)}</td><td>${escapeHtml(c.row.scenario)}</td></tr>`).join("");
+  const unchecked = checklist.filter((c) => !c.checked);
+  const nags = unchecked.map((c) => {
+    const row = c.row;
+    const amount = Math.max(parseFloat(row.amount_due || "0") - parseFloat(row.paid_amount || "0"), 0);
+    const vars = { name: row.customer_name, amount: fmtAmount(amount), due_date: fmtDate(c.dueDate, row.lang), installment_no: row.installment_no, total_installments: row.total_installments, car: row.car, company: COMPANY, company_phone: COMPANY_PHONE };
+    return `<div class="card"><div class="top"><span class="name">${escapeHtml(row.customer_name)}</span></div><div class="msg">${escapeHtml(render("monthly_unchecked", row.lang, vars))}</div></div>`;
+  }).join("");
+  el.innerHTML = `
+    <p class="hint">${period} — ${checklist.length} on the checklist, ${unchecked.length} unchecked.</p>
+    <table><tr><th></th><th>Customer</th><th>Installment</th><th>Due</th><th>Scenario</th></tr>${rows}</table>
+    ${unchecked.length ? `<h2 style="margin-top:16px">If today were the send day, these get the "still outstanding" message</h2>${nags}` : ""}
+  `;
+}
+
+function renderExcluded(excluded) {
+  const el = document.getElementById("excluded");
+  if (!excluded.length) { el.innerHTML = `<p class="empty">None.</p>`; return; }
+  el.innerHTML = excluded.map((e) => `<div class="excl-row"><b>${escapeHtml(e.row.customer_name)}</b>: ${escapeHtml(e.reason)} — ${escapeHtml(e.row.scenario)}</div>`).join("");
+}
+
+document.getElementById("runBtn").addEventListener("click", runSimulation);
+
+// Default "today" = local today's date
+(function initToday() {
+  const d = new Date();
+  const iso = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+  document.getElementById("todayInput").value = iso;
+})();
+</script>
+</body>
+</html>
