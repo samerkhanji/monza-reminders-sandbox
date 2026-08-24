@@ -10,8 +10,15 @@ and see exactly what would fire, without touching Supabase or the real app.
 
 ## How to use it
 
-1. Open `index.html` directly in any browser (double-click it, or drag it into a tab). No
-   server, no build step, no install.
+**Live at [samerkhanji.github.io/monza-reminders-sandbox](https://samerkhanji.github.io/monza-reminders-sandbox/)** — just open that link, no install needed.
+
+(If you instead open `index.html` by double-clicking it, the page loads fine but **Load
+from Sheet will fail** — Chrome blocks `fetch()` calls made from a `file://` page to
+remote sites, even though the "Open Sheet" link still works since that's a plain
+navigation. Use the live URL above, or the CSV upload fallback, when working from a local
+copy.)
+
+1. Open the page (see above).
 2. Load data one of two ways:
    - **Google Sheet** — paste a Sheet ID + tab (gid), click **Load from Sheet**. The Sheet
      must be shared as **Anyone with the link → Viewer** (Share → General access) or the
